@@ -38,16 +38,8 @@ footer{padding:15px 3px 35px;color:var(--muted);font-size:12px}
 <button id="analyze">開始分析</button><div id="status" class="small" style="margin-top:8px"></div>
 </section>
 
-<section class="card">
-<h2>③ Fuel Map（選填）</h2>
-<input id="fuelmap" type="file" accept="image/*">
-<p class="note"><b>提供完整 Fuel Map 截圖，可讓 SuperXX 進一步對應目前設定值，提供更明確的「目前值 → 建議值 → +／−幾格」修正建議。</b><br>
-備註：請將調整係數設定為 <b>1</b>；此時每調整一格為 <b>±0.8</b>。<br>
-目前 v2 先完成 Log 分析；Fuel Map OCR 與格位自動對應下一階段加入。</p>
-</section>
-
 <div id="result" class="hidden">
-<section class="card"><h2>④ 本次 Log 總覽</h2><div id="stats" class="stats"></div></section>
+<section class="card"><h2>③ 本次 Log 總覽</h2><div id="stats" class="stats"></div></section>
 <section class="card"><h2>🔴 高負載運轉提醒</h2><div id="load"></div></section>
 <section class="card"><h2>⛽ 供油修正建議</h2><div class="alert yellow"><b>主要觀測：Fuel_CL</b><br>Fuel_CL 代表 ECU 的 Closed Loop 供油修正；AFR Target / WBO2 用於確認修正後結果。Fuel_CL 正值＝ECU 增油，負值＝ECU 減油。</div><div id="fuel"></div><div class="tablewrap"><table id="fuelTable"></table></div></section>
 <section class="card"><h2>⚡ 點火／爆震風險</h2><div id="ign"></div></section>
@@ -71,7 +63,15 @@ function mad(a){a=a.filter(Number.isFinite);let m=med(a);return m==null?null:med
 function fmt(x,d=2){return x==null?"—":x.toFixed(d)}
 function pct(x){return x==null?"—":(x>0?"+":"")+x.toFixed(2)+"%"}
 function esc(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function isHigh(r){return r.RPM>=cfg.rpm&&r.TPS_Percent>=cfg.tps&&r.Cyl1_Eng_AP!=null&&r.Cyl1_Eng_AP>=cfg.ap}
+function loadTier(ap){
+ if(ap==null) return ["—",""];
+ if(ap>=85) return ["🔴 高負載","red"];
+ if(ap>=60) return ["🟠 中高負載","orange"];
+ if(ap>=40) return ["🟡 中負載","yellow"];
+ return ["🟢 低負載","green"];
+}
+function isHigh(r){return r.Cyl1_Eng_AP!=null&&r.Cyl1_Eng_AP>=85}
+function isMedHigh(r){return r.Cyl1_Eng_AP!=null&&r.Cyl1_Eng_AP>=60}
 function valid(r){
  return r.T_Eng!=null&&r.T_Eng>=cfg.temp&&r.RPM!=null&&r.TPS_Percent!=null&&r.AFR_Target!=null&&r.AFR_WBO2!=null&&r.Fuel_CL!=null&&
  (r.Dec_FC_En==null||r.Dec_FC_En===0)&&(r.Inj_Cut==null||r.Inj_Cut===0);
@@ -154,25 +154,27 @@ function bins(rs){
  return [...m.values()].sort((a,b)=>a.rb-b.rb||a.tb-b.tb);
 }
 function build(){
- const validRows=rows.filter(valid), high=validRows.filter(isHigh), bs=bins(validRows);
+ const validRows=rows.filter(valid), high=validRows.filter(isHigh), medhigh=validRows.filter(isMedHigh), bs=bins(validRows);
  document.getElementById("result").classList.remove("hidden");
  const files=new Set(rows.map(r=>r._file)).size;
  document.getElementById("stats").innerHTML=[
  ["Log 檔案",files],["原始樣本",rows.length.toLocaleString()],["有效熱車樣本",validRows.length.toLocaleString()],
- ["高負載樣本",high.length.toLocaleString()],["高負載時間",(high.length*.1).toFixed(1)+" 秒"],
+ ["中高負載樣本",medhigh.length.toLocaleString()],["高負載樣本",high.length.toLocaleString()],["高負載時間",(high.length*.1).toFixed(1)+" 秒"],
  ["高負載 Fuel_CL",pct(med(high.map(r=>r.Fuel_CL)))]
  ].map(x=>`<div class="stat">${x[0]}<b>${x[1]}</b></div>`).join("");
 
- if(high.length){
-  const r1=Math.min(...high.map(r=>r.RPM)),r2=Math.max(...high.map(r=>r.RPM)),t1=Math.min(...high.map(r=>r.TPS_Percent)),t2=Math.max(...high.map(r=>r.TPS_Percent)),a=high.map(r=>r.Cyl1_Eng_AP).filter(Number.isFinite),tm=med(high.map(r=>r.T_Eng));
-  document.getElementById("load").innerHTML=`<div class="alert red"><b>本次 Log 有較長時間高負載運轉</b><br>
-  主要高負載區域：<br>RPM：<b>${fmt(r1,0)}～${fmt(r2,0)} rpm</b><br>TPS：<b>${fmt(t1,1)}～${fmt(t2,1)}%</b><br>
-  Engine AP：<b>${fmt(Math.min(...a),1)}～${fmt(Math.max(...a),1)}</b><br>有效時間：約 <b>${(high.length*.1).toFixed(1)} 秒</b><br><br>
-  ⚠️ 此區域屬於高負載工況，請注意<strong>點火角、燃油辛烷值、引擎溫度</strong>，並留意是否出現異常爆震聲。<br>
-  <span class="small">高負載不等於爆震；目前沒有 Knock Signal，因此不宣稱確定爆震。</span></div>`;
- }else document.getElementById("load").innerHTML='<div class="alert green"><b>沒有足夠資料形成高負載區。</b><br>條件：T_Eng ≥60°C、RPM ≥3500、TPS ≥80%、Engine AP ≥85。</div>';
+ if(medhigh.length){
+  const r1=Math.min(...medhigh.map(r=>r.RPM)),r2=Math.max(...medhigh.map(r=>r.RPM)),t1=Math.min(...medhigh.map(r=>r.TPS_Percent)),t2=Math.max(...medhigh.map(r=>r.TPS_Percent)),a=medhigh.map(r=>r.Cyl1_Eng_AP).filter(Number.isFinite);
+  const hAP=high.length?`<br><br><b>其中 🔴 高負載區（ENG_AP ≥85）：</b> ${Math.min(...high.map(r=>r.RPM)).toFixed(0)}～${Math.max(...high.map(r=>r.RPM)).toFixed(0)} rpm / TPS ${Math.min(...high.map(r=>r.TPS_Percent)).toFixed(1)}～${Math.max(...high.map(r=>r.TPS_Percent)).toFixed(1)}% / AP ${Math.min(...high.map(r=>r.Cyl1_Eng_AP)).toFixed(1)}～${Math.max(...high.map(r=>r.Cyl1_Eng_AP)).toFixed(1)}`:"";
+  document.getElementById("load").innerHTML=`<div class="alert orange"><b>本次 Log 有中高負載運轉</b><br>
+  <b>🟠 中高負載區（ENG_AP ≥60）</b><br>RPM：<b>${r1.toFixed(0)}～${r2.toFixed(0)} rpm</b><br>
+  TPS：<b>${t1.toFixed(1)}～${t2.toFixed(1)}%</b><br>
+  ENG_AP：<b>${Math.min(...a).toFixed(1)}～${Math.max(...a).toFixed(1)}</b><br>
+  累積時間：約 <b>${(medhigh.length*.1).toFixed(1)} 秒</b>${hAP}<br><br>
+  ⚠️ 負載標註與供油修正分開；進一步是否需要修油仍看 Fuel_CL、AFR、樣本數與一致性。</div>`;
+}else document.getElementById("load").innerHTML='<div class="alert green"><b>本次 Log 沒有 ENG_AP ≥60 的中高負載資料。</b></div>';
 
- let arr=bs.filter(b=>b.rs.some(isHigh)).map(b=>{
+ let arr=bs.filter(b=>b.rs.some(isMedHigh)).map(b=>{
   const rs=b.rs,cl=med(rs.map(r=>r.Fuel_CL)),q=quality(rs),af=med(rs.map(r=>(r.AFR_WBO2/r.AFR_Target-1)*100)),m=mad(rs.map(r=>r.Fuel_CL));
   let act=rs.length<cfg.minRef?"資料不足":Math.abs(cl)<=cfg.dead?"不需要修改":Math.abs(cl)>=8?"偏差過大，先確認 AF2／燃油系統":cl>0?"增加供油":"減少供油";
   return {...b,cl,q,af,m,act,sa:med(rs.map(r=>r.SA)),temp:med(rs.map(r=>r.T_Eng)),ap:med(rs.map(r=>r.Cyl1_Eng_AP))};
@@ -180,7 +182,7 @@ function build(){
  arr.sort((a,b)=>Math.abs(b.cl)-Math.abs(a.cl));
  const need=arr.filter(x=>!["不需要修改","資料不足"].includes(x.act)), no=arr.filter(x=>x.act==="不需要修改"), insuf=arr.filter(x=>x.act==="資料不足");
  document.getElementById("fuel").innerHTML=`<div class="stats"><div class="stat">需要關注<b>${need.length}</b></div><div class="stat">不需修改<b>${no.length}</b></div><div class="stat">資料不足<b>${insuf.length}</b></div></div>`;
- document.getElementById("fuelTable").innerHTML=`<thead><tr><th>RPM</th><th>TPS</th><th>樣本</th><th>Fuel_CL</th><th>AFR偏差</th><th>T_Eng</th><th>AP</th><th>品質</th><th>供油判定</th></tr></thead><tbody>${arr.map(b=>`<tr><td>${b.rb}～${b.rb+499}</td><td>${b.tb}～${b.tb+9}%</td><td>${b.rs.length}</td><td>${pct(b.cl)}</td><td>${pct(b.af)}</td><td>${fmt(b.temp,1)}°C</td><td>${fmt(b.ap,1)}</td><td><span class="pill ${b.q[0]}">${b.q[1]}</span></td><td><b>${b.act}</b></td></tr>`).join("")}</tbody>`;
+ document.getElementById("fuelTable").innerHTML=`<thead><tr><th>RPM</th><th>TPS</th><th>ENG_AP</th><th>負載</th><th>樣本</th><th>Fuel_CL</th><th>AFR偏差</th><th>T_Eng</th><th>AP</th><th>品質</th><th>供油判定</th></tr></thead><tbody>${arr.map(b=>`<tr><td>${b.rb}～${b.rb+499}</td><td>${b.tb}～${b.tb+9}%</td><td>${fmt(Math.min(...b.rs.map(r=>r.Cyl1_Eng_AP).filter(Number.isFinite)),1)}～${fmt(Math.max(...b.rs.map(r=>r.Cyl1_Eng_AP).filter(Number.isFinite)),1)}</td><td>${loadTier(med(b.rs.map(r=>r.Cyl1_Eng_AP)))[0]}</td><td>${b.rs.length}</td><td>${pct(b.cl)}</td><td>${pct(b.af)}</td><td>${fmt(b.temp,1)}°C</td><td>${fmt(b.ap,1)}</td><td><span class="pill ${b.q[0]}">${b.q[1]}</span></td><td><b>${b.act}</b></td></tr>`).join("")}</tbody>`;
 
  const sa=high.map(r=>r.SA).filter(Number.isFinite);
  document.getElementById("ign").innerHTML=high.length?`<div class="alert yellow"><b>高負載點火工況摘要</b><br>
@@ -188,7 +190,7 @@ function build(){
  不使用固定「SA 超過某角度＝危險」。SA 必須與 RPM、TPS、Engine AP、AFR、溫度及重複性一起判斷。<br>
  若同一高負載區在多次 Log 重複出現異常，可優先做 <b>退 1° A/B 驗證</b>。目前沒有 Knock Signal，不能證明爆震。</div>`:'<div class="alert green">高負載資料不足，暫不做點火風險判斷。</div>';
 
- document.getElementById("detail").innerHTML=`<thead><tr><th>RPM</th><th>TPS</th><th>樣本</th><th>Fuel_CL</th><th>AFR偏差</th><th>SA</th><th>AP</th><th>T_Eng</th><th>品質</th><th>高負載</th></tr></thead><tbody>${bs.map(b=>{const rs=b.rs,q=quality(rs);return `<tr><td>${b.rb}～${b.rb+499}</td><td>${b.tb}～${b.tb+9}%</td><td>${rs.length}</td><td>${pct(med(rs.map(r=>r.Fuel_CL)))}</td><td>${pct(med(rs.map(r=>(r.AFR_WBO2/r.AFR_Target-1)*100)))}</td><td>${fmt(med(rs.map(r=>r.SA)),1)}°</td><td>${fmt(med(rs.map(r=>r.Cyl1_Eng_AP)),1)}</td><td>${fmt(med(rs.map(r=>r.T_Eng)),1)}°C</td><td><span class="pill ${q[0]}">${q[1]}</span></td><td>${rs.some(isHigh)?"🔴":"—"}</td></tr>`}).join("")}</tbody>`;
+ document.getElementById("detail").innerHTML=`<thead><tr><th>RPM</th><th>TPS</th><th>樣本</th><th>ENG_AP</th><th>負載</th><th>Fuel_CL</th><th>AFR偏差</th><th>SA</th><th>AP</th><th>T_Eng</th><th>品質</th><th>高負載</th></tr></thead><tbody>${bs.map(b=>{const rs=b.rs,q=quality(rs);return `<tr><td>${b.rb}～${b.rb+499}</td><td>${b.tb}～${b.tb+9}%</td><td>${rs.length}</td><td>${fmt(med(rs.map(r=>r.Cyl1_Eng_AP)),1)}</td><td>${loadTier(med(rs.map(r=>r.Cyl1_Eng_AP)))[0]}</td><td>${pct(med(rs.map(r=>r.Fuel_CL)))}</td><td>${pct(med(rs.map(r=>(r.AFR_WBO2/r.AFR_Target-1)*100)))}</td><td>${fmt(med(rs.map(r=>r.SA)),1)}°</td><td>${fmt(med(rs.map(r=>r.Cyl1_Eng_AP)),1)}</td><td>${fmt(med(rs.map(r=>r.T_Eng)),1)}°C</td><td><span class="pill ${q[0]}">${q[1]}</span></td><td>${rs.some(isHigh)?"🔴 高負載":rs.some(isMedHigh)?"🟠 中高負載":"—"}</td></tr>`}).join("")}</tbody>`;
 }
 
 document.getElementById("logs").addEventListener("change",()=>{

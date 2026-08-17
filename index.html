@@ -49,7 +49,7 @@ button:active{transform:translateY(1px)}
 .detail-card details[open] summary::after{content:"－"}
 .detail-card summary span{font-size:12px;font-weight:600;color:#64748b;margin-left:8px}
 .detail-note{margin:12px 0 10px}
-</style>
+.sample-rule-box{margin-top:9px;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;line-height:1.65;background:rgba(255,255,255,.035)}</style>
 <style>
 .format-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
 .format-grid label{display:block;margin-bottom:6px;font-size:12px;font-weight:800;color:#64748b}
@@ -80,23 +80,31 @@ button:active{transform:translateY(1px)}
     <h1>SuperXX Log 分析建議</h1>
     <div class="sub">CT125 2V版本｜以實際 SuperXX Fuel Map 格點為核心，讓 Log 修正結果直接對應可調格。</div>
     <div class="hero-meta">
-      <span>Fuel_CL 核心</span><span>T_Eng >80°C</span><span>AP &gt;60 / ≥80 提醒</span><span>實際 Map 格</span>
+      <span>Fuel_CL 核心</span><span>T_Eng >85°C</span><span>AP &gt;60 / ≥80 提醒</span><span>實際 Map 格</span>
     </div>
   </div>
 </section>
 
 <section class="card">
-<h2><span class="section-tag">PROFILE</span>① 引擎版本</h2>
+<h2><span class="section-tag">PROFILE</span>① Log 系統 → ② ECU 系列 → ③ 引擎</h2>
 <div class="format-grid">
-<div>
-<label>Log 平台（自動辨識）</label>
-<div id="logPlatform" class="format-badge">尚未辨識</div>
+
 </div>
-<div>
-<label>引擎版本（請自行選擇）</label>
+<div class="note" style="margin-top:7px">先選 Log 系統，再選 ECU 系列與引擎；程式只使用該組對應的格式與真實 Map，不會跨系列套用。</div>
+<div class="sample-rule-box">
+<strong>📌 採樣條件</strong><br>
+🌡️ <strong>引擎溫度 T_Eng &gt; 85°C</strong> 才採樣<br>
+📈 <strong>Fuel_CL 超過 ±2%</strong> 才採樣；<strong>-2%～+2% 不採樣</strong>（CL 準確度已足夠，無需再修正）<br>
+⏱️ <strong>進入 Map 格後穩定 1 秒</strong>才開始收樣<br>
+🔢 <strong>穩定片段至少 10 筆</strong>才納入分析
+</div>
+</section>
+
+<section class="card">
+<h2><span class="section-tag">PROFILE</span>① Log 系統 → ② ECU 系列 → ③ 引擎</h2>
 <div class="format-grid">
 <div>
-<label>Log 系統（請自行選擇）</label>
+<label>① Log 系統（請自行選擇）</label>
 <select id="logPlatformSelect">
 <option value="">請先選擇</option>
 <option value="apple">Apple Log</option>
@@ -104,7 +112,15 @@ button:active{transform:translateY(1px)}
 </select>
 </div>
 <div>
-<label>引擎版本（請自行選擇）</label>
+<label>② ECU 系列（請自行選擇）</label>
+<select id="ecuSeriesSelect">
+<option value="">請先選擇</option>
+<option value="x">X 系列（SuperX / MiniX）</option>
+<option value="xx">XX 系列（SuperXX / MiniXX）</option>
+</select>
+</div>
+<div>
+<label>③ 引擎版本（請自行選擇）</label>
 <select id="profile">
 <option value="">請先選擇</option>
 <option value="ct125_2v">CT125 2V</option>
@@ -112,40 +128,13 @@ button:active{transform:translateY(1px)}
 </select>
 </div>
 </div>
-</div>
-</div>
-<div class="note" style="margin-top:7px">Log 平台由檔案格式自動辨識；2V／4V 由使用者選擇。不同平台使用各自 Log／Map 格式解析，後面的分析核心與修正規則完全相同。</div>
-</section>
-
-<section class="card">
-<h2><span class="section-tag">INPUT</span>② 上傳 Log</h2><div id="androidMapRule" class="android-map-rule">
-Android 2V：Log 數值依實際 RPM／TPS Map 軸的相鄰格中點切分區間；每筆資料只會落入一個實際存在的 Map 格，不建立虛擬格。
-</div>
-<div id="logSystemConfirm" class="log-confirm">
-<div class="log-confirm-title">🔍 Log 系統確認</div>
-<div class="log-confirm-grid">
-<div><span>Log 系統</span><b id="confirmPlatform">尚未辨識</b></div>
-<div><span>引擎版本</span><b id="confirmEngine">尚未選擇</b></div>
-<div><span>實際分析 Parser</span><b id="confirmParser">尚未啟用</b></div>
-<div><span>Map 格式</span><b id="confirmMap">尚未啟用</b></div>
-</div>
-<div id="confirmStatus" class="log-confirm-status">上傳 Log 後會顯示實際使用的分析系統，避免套用錯誤格式。</div>
-</div>
-
-<div class="drop">選擇或拖放 <b>.loga</b> / <b>.loga.zip</b> / <b>.zip</b><br>
-<input id="logs" type="file" accept=".loga,.zip,.log,.txt,.csv" multiple style="margin-top:10px"></div>
-<p class="note">
-支援單一或多份 Log；<b>.loga 是 ZIP 容器，會在瀏覽器內解壓後分析</b>。<br>
-分析只使用實際 Log 資料，不使用圖片／Fuel Map 圖片上傳。
-</p>
-<button id="analyze">開始分析</button>
-<div id="status" class="small" style="margin-top:8px"></div>
+<div class="note" style="margin-top:7px">先選 Log 系統，再選 ECU 系列；程式只會載入該「Log 系統 × ECU 系列 × 引擎」對應的格式與真實 Map，不會跨系列套用。</div>
 </section>
 
 <section class="card">
 <h2><span class="section-tag">RULES</span>③ 固定分析基準</h2>
 <div class="stats">
-<div class="stat">熱車門檻<b>T_Eng >80°C</b></div>
+<div class="stat">熱車門檻<b>T_Eng >85°C</b></div>
 <div class="stat">中高負載<b>AP &gt; 60</b></div>
 <div class="stat">Map 調整係數<b>1 = 1格</b></div>
 <div class="stat">單格調整量<b>±0.8%</b></div>
@@ -171,7 +160,7 @@ Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / 
 <div class="note detail-note">
 這裡列出所有 Log 實際有對應到的 RPM × TPS Map 格，包含樣本不足的格子。
 <b>不代表可以調整油圖。</b><br>
-真正的調校建議只看上方「⛽ Fuel Map 修正建議」；必須符合固定門檻：T_Eng >80°C、每個實際 RPM × TPS Map 格 ≥10 筆有效樣本，且 Fuel_CL 換算後超過 ±1 格。
+真正的調校建議只看上方「⛽ Fuel Map 修正建議」；必須符合固定門檻：T_Eng >85°C、每個實際 RPM × TPS Map 格 ≥10 筆有效樣本，且 Fuel_CL 換算後超過 ±1 格。
 </div>
 <div class="tablewrap"><table id="detail"></table></div>
 </details>
@@ -187,85 +176,58 @@ Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / 
 const REQUIRED=["Time","RPM","TPS_Percent","AFR_Target","AFR_WBO2","Fuel_CL","T_Air","SA","T_Eng","Cyl1_Eng_AP","Cyl1_Comn_FuelPW","Cyl1_Injector_Period_Rate"];
 
 // 完全依使用者提供的 SuperXX 實際 Fuel Map 格點。
-const RPM_GRID=[
-  400,800,1200,1600,2000,2400,2800,3200,3600,4000,4400,4800,
-  5200,5600,6000,6400,6800,7200,7600,8000,8400,8800,9200,9600,
-  10000,10200,10400,10600,10800,11000
-];
-const TPS_GRID=[
-  0,2,4,6,8,10,12,14,16,18,20,21,23,25,27,29,
-  37,45,53,61,68,76,84,92,100
-];
-
-const ANDROID_2V_RPM_GRID=[
-  800,1600,2400,3200,4000,4800,5600,6400,7200,8000,
-  8800,9600,10400,11200,12000,12800
-];
-const ANDROID_2V_TPS_GRID=[
-  0,2,4,6,8,10,15,20,25,30,40,50,60,70,80,90,100
-];
-
 let selectedLogPlatform="";
-const cfg={temp:80,apGreen:60,apRed:80,minRef:10,stableMinSamples:10,stableWaitSec:1.0,clDeadband:2.5,clPerCell:0.8};
+// 真實 ECU Map 格式：X / XX 完全分離。
+// X：SuperX / MiniX；XX：SuperXX / MiniXX。
+// Log 系統（Apple / Android）只決定各自 Parser；ECU 系列決定各自真實 Map。
+// 任何 Log × ECU 組合若沒有對應 Map，禁止 fallback，直接停止分析。
+const X_RPM_GRID=[800,1600,2400,3200,4000,4800,5600,6400,7200,8000,8800,9600,10400,11200,12000,12800];
+const X_TPS_GRID=[15,20,25,30,40,50,60,70,80,90,100];
+
+const XX_RPM_GRID=[400,800,1200,1600,2000,2400,2800,3200,3600,4000,4400,4800,5200,5600,6000,6400,6800,7200,7600,8000,8400,8800,9200,9600,9800,10000,10200,10400,10600,10800,11000,11200,11400];
+const XX_TPS_GRID=[0,2,4,6,8,10,12,14,16,18,20,21,23,25,27,29,37,45,53,61,68,76,84,92,100];
+
+const MAPS={
+  "apple_x":   {rpm:X_RPM_GRID,tps:X_TPS_GRID},
+  "android_x": {rpm:X_RPM_GRID,tps:X_TPS_GRID},
+  "apple_xx":   {rpm:XX_RPM_GRID,tps:XX_TPS_GRID},
+  "android_xx":{rpm:XX_RPM_GRID,tps:XX_TPS_GRID}
+};
+
+const cfg={temp:85,apGreen:60,apRed:80,minRef:10,stableMinSamples:10,stableWaitSec:1.0,clDeadband:2.0,clPerCell:0.8};
 let rows=[];
+
+
 
 function updateLogSystemConfirm(){
  const box=$("logSystemConfirm"),p=$("confirmPlatform"),e=$("confirmEngine"),pa=$("confirmParser"),m=$("confirmMap"),st=$("confirmStatus");
- const platform=$("logPlatformSelect")?.value||"", engine=$("profile")?.value||"";
- if(p)p.textContent=platform==="android"?"🤖 Android aRacer Log":platform==="apple"?"🍎 Apple Log":"尚未選擇";
+ const platform=$("logPlatformSelect")?.value||"", series=$("ecuSeriesSelect")?.value||"", engine=$("profile")?.value||"";
+ const ptxt=platform==="android"?"🤖 Android aRacer Log":platform==="apple"?"🍎 Apple Log":"尚未選擇";
+ const stxt=series==="x"?"X 系列（SuperX / MiniX）":series==="xx"?"XX 系列（SuperXX / MiniXX）":"尚未選擇";
+ if(p)p.textContent=ptxt;
  if(e)e.textContent=engine==="ct125_2v"?"CT125 2V":engine==="ct125_4v"?"CT125 4V（待擴充）":"尚未選擇";
- if(platform==="android"&&engine==="ct125_2v"){
-  if(pa)pa.textContent="Android 2V Parser";if(m)m.textContent="Android 實際 RPM × TPS Map（區間對應）";
-  if(st)st.textContent="🟢 已確認：Android aRacer Log → CT125 2V → Android 2V Parser";
-  box?.classList.add("ok");box?.classList.remove("warn");
- }else if(platform==="apple"&&engine==="ct125_2v"){
-  if(pa)pa.textContent="Apple 2V Parser";if(m)m.textContent="Apple 實際 RPM × TPS Map（區間對應）";
-  if(st)st.textContent="🟢 已確認：Apple Log → CT125 2V → Apple 2V Parser";
-  box?.classList.add("ok");box?.classList.remove("warn");
+ if(pa)pa.textContent=(platform&&series&&engine==="ct125_2v")?ptxt+" × "+stxt+" 專屬 Parser":"尚未啟用";
+ if(m)m.textContent=(platform&&series&&engine==="ct125_2v")?ptxt+" × "+stxt+" 的實際 Map":"尚未啟用";
+ if(platform&&series&&engine==="ct125_2v"){
+   if(st)st.textContent="🟢 已選定："+ptxt+" → "+stxt+" → CT125 2V；僅使用該組專屬格式與 Map。";
+   box?.classList.add("ok");box?.classList.remove("warn");
  }else if(engine==="ct125_4v"){
-  if(pa)pa.textContent="尚未啟用";if(m)m.textContent="尚未啟用";
-  if(st)st.textContent="🟠 CT125 4V 目前待擴充，尚未開放分析。";
-  box?.classList.add("warn");box?.classList.remove("ok");
+   if(st)st.textContent="🟠 CT125 4V 目前為待擴充，尚未開放分析。";
+   box?.classList.add("warn");box?.classList.remove("ok");
  }else{
-  if(pa)pa.textContent="尚未啟用";if(m)m.textContent="尚未啟用";
-  if(st)st.textContent="請先選擇 Log 系統與引擎版本。";
-  box?.classList.remove("ok","warn");
+   if(st)st.textContent="請先完成 Log 系統、ECU 系列與引擎選擇。";
+   box?.classList.remove("ok","warn");
  }
 }
-
 function validateSelection(){
- const platform=$("logPlatformSelect")?.value||"", engine=$("profile")?.value||"";
+ const platform=$("logPlatformSelect")?.value||"", series=$("ecuSeriesSelect")?.value||"", engine=$("profile")?.value||"";
  if(!platform){alert("請先選擇 Log 系統：Apple Log 或 Android aRacer Log。");return false;}
+ if(!series){alert("請先選擇 ECU 系列：X 系列或 XX 系列。");return false;}
  if(!engine){alert("請先選擇引擎版本：CT125 2V 或 CT125 4V。");return false;}
  if(engine==="ct125_4v"){alert("CT125 4V 目前為待擴充版本，尚未開放分析。");return false;}
  return true;
 }
-function updateLogSystemConfirm(){
- const p=$("confirmPlatform"),e=$("confirmEngine"),pa=$("confirmParser"),m=$("confirmMap"),st=$("confirmStatus");
- const platform=$("logPlatformSelect")?.value||"", engine=$("profile")?.value||"";
- const box=$("logSystemConfirm");
- if(p)p.textContent=platform==="android"?"🤖 Android aRacer Log":platform==="apple"?"🍎 Apple Log":"尚未選擇";
- if(e)e.textContent=engine==="ct125_2v"?"CT125 2V":engine==="ct125_4v"?"CT125 4V（待擴充）":"尚未選擇";
- if(platform==="android"&&engine==="ct125_2v"){
-   if(pa)pa.textContent="Android 2V Parser";
-   if(m)m.textContent="Android 實際 RPM × TPS Map";
-   if(st)st.textContent="🟢 已確認：Android aRacer Log → CT125 2V → Android 2V Parser";
-   box?.classList.add("ok");box?.classList.remove("warn");
- }else if(platform==="apple"&&engine==="ct125_2v"){
-   if(pa)pa.textContent="Apple 2V Parser";
-   if(m)m.textContent="Apple 實際 RPM × TPS Map";
-   if(st)st.textContent="🟢 已確認：Apple Log → CT125 2V → Apple 2V Parser";
-   box?.classList.add("ok");box?.classList.remove("warn");
- }else if(engine==="ct125_4v"){
-   if(pa)pa.textContent="尚未啟用";if(m)m.textContent="尚未啟用";
-   if(st)st.textContent="🟠 CT125 4V 目前待擴充，尚未開放分析。";
-   box?.classList.add("warn");box?.classList.remove("ok");
- }else{
-   if(pa)pa.textContent="尚未啟用";if(m)m.textContent="尚未啟用";
-   if(st)st.textContent="請先選擇 Log 系統與引擎版本。";
-   box?.classList.remove("ok","warn");
- }
-}
+
 function n(v){const x=Number(v);return Number.isFinite(x)?x:null}
 function med(a){a=a.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const i=Math.floor(a.length/2);return a.length%2?a[i]:(a[i-1]+a[i])/2}
 function mad(a){a=a.filter(Number.isFinite);const m=med(a);return m==null?null:med(a.map(x=>Math.abs(x-m)))}
@@ -405,45 +367,53 @@ function gridCellByMidpoint(v,grid){
  return null;
 }
 function stableMapGroups(validRows){
- const android=$("logPlatformSelect")?.value==="android"&&$("profile")?.value==="ct125_2v";
- const rpmGrid=android?ANDROID_2V_RPM_GRID:RPM_GRID;
- const tpsGrid=android?ANDROID_2V_TPS_GRID:TPS_GRID;
- const groups=new Map();
- let currentKey=null,currentRows=[],stableStart=null,lastTime=null;
+ const platform=$("logPlatformSelect")?.value||"", series=$("ecuSeriesSelect")?.value||"";
+ const key=platform+"_"+series;
+ const map=MAPS[key];
+ if(!map)throw new Error("找不到「"+key+"」對應的真實 App Map，為避免套錯，已停止分析。");
 
+ const groups=new Map();
+ let currentKey=null,currentRows=[],stableStart=null;
  const flush=()=>{
    if(currentRows.length>=cfg.stableMinSamples){
-     const key=currentKey;
-     if(!groups.has(key))groups.set(key,{rpm:currentRows[0]._rp,tps:currentRows[0]._tp,rs:[]});
-     groups.get(key).rs.push(...currentRows);
+     if(!groups.has(currentKey))groups.set(currentKey,{rpm:currentRows[0]._rp,tps:currentRows[0]._tp,rs:[]});
+     groups.get(currentKey).rs.push(...currentRows);
    }
-   currentKey=null;currentRows=[];stableStart=null;lastTime=null;
+   currentKey=null;currentRows=[];stableStart=null;
  };
 
  for(const r of validRows){
-   const rp=gridCellByMidpoint(r.RPM,rpmGrid),tp=gridCellByMidpoint(r.TPS_Percent,tpsGrid);
+   // 該 Log 版本已先由 parser 轉成統一 RPM/TPS 數值；
+   // 這裡只允許落入目前所選 ECU 系列的真實 Map 軸。
+   const rp=gridCellByMidpoint(r.RPM,map.rpm);
+   const tp=gridCellByMidpoint(r.TPS_Percent,map.tps);
    if(rp==null||tp==null){flush();continue;}
-   const key=rp+"|"+tp;
+
+   const cellKey=rp+"|"+tp;
    const t=Number(r.Time);
-   if(key!==currentKey){
+
+   if(cellKey!==currentKey){
      flush();
-     currentKey=key;currentRows=[];stableStart=Number.isFinite(t)?t:null;lastTime=t;
+     currentKey=cellKey;
+     currentRows=[];
+     stableStart=Number.isFinite(t)?t:null;
    }
-   if(stableStart!=null && Number.isFinite(t) && t-stableStart<cfg.stableWaitSec){
-     lastTime=t;
-     continue;
-   }
-   r._rp=rp;r._tp=tp;
+
+   // 先進格，穩定滿 1 秒後才開始收樣。
+   if(stableStart!=null&&Number.isFinite(t)&&t-stableStart<cfg.stableWaitSec)continue;
+
+   r._rp=rp;
+   r._tp=tp;
    currentRows.push(r);
-   lastTime=t;
  }
  flush();
  return [...groups.values()].sort((a,b)=>a.rpm-b.rpm||a.tps-b.tps);
 }
+function cellGroups(validRows){return stableMapGroups(validRows);}
 function cellGroups(validRows){ return stableMapGroups(validRows); }
 
 function build(){
- const androidMode=$("profile")?.value==="ct125_2v"&&$("logPlatformSelect")?.value==="android";
+ const androidMode=$("logPlatformSelect")?.value==="android";
  const hot=rows.filter(warmValid);
  const high=hot.filter(r=>r.Cyl1_Eng_AP>cfg.apGreen);
  const cells=cellGroups(hot);
@@ -451,9 +421,9 @@ function build(){
  const stats=[
   ["Log 檔案",new Set(rows.map(r=>r._file)).size],
   ["原始樣本",rows.length.toLocaleString()],
-  ["T_Eng >80°C",hot.length.toLocaleString()],
+  ["T_Eng >85°C",hot.length.toLocaleString()],
   ["AP >60",high.length.toLocaleString()],
-  ["已對應 Map 格",cells.length],["Log 格式",androidMode?"Android aRacer":"PC／Apple"]
+  ["已對應 Map 格",cells.length],["Log 格式",androidMode?"Android aRacer":"Apple"]
  ];
  $("stats").innerHTML=stats.map(x=>`<div class="stat">${x[0]}<b>${x[1]}</b></div>`).join("");
 
@@ -471,7 +441,7 @@ function build(){
    這不是爆震判定；本 Log 分析沒有 Knock Signal，不能宣稱已經爆震。
   </div>`;
  }else{
-  $("load").innerHTML=`<div class="alert green">本次T_Eng >80°C 的有效資料中沒有 AP >60 樣本。</div>`;
+  $("load").innerHTML=`<div class="alert green">本次T_Eng >85°C 的有效資料中沒有 AP >60 樣本。</div>`;
  }
 
  const arr=cells.map(c=>{
@@ -536,6 +506,7 @@ function build(){
 const $=id=>document.getElementById(id);
 
 $("logPlatformSelect").addEventListener("change",()=>updateLogSystemConfirm());
+$("ecuSeriesSelect").addEventListener("change",()=>updateLogSystemConfirm());
 $("profile").addEventListener("change",()=>updateLogSystemConfirm());
 $("logs").addEventListener("change",()=>{
  const fs=[...$("logs").files];

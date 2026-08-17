@@ -66,13 +66,17 @@ button:active{transform:translateY(1px)}
 
 <section class="card">
 <h2><span class="section-tag">PROFILE</span>① 引擎版本</h2>
-<select id="profile"><option>CT125 2V版本</option><option>CT125 4V版本（擴充預留）</option></select>
-<div class="note" style="margin-top:7px">目前正式分析以 CT125 2V 版本為基準；4V 僅保留擴充介面。</div>
+<select id="profile">
+<option value="ct125_2v">CT125 2V版本</option>
+<option value="ct125_4v">CT125 4V版本（擴充預留）</option>
+<option value="android_2v">CT125 2V（Android aRacer Log）</option>
+</select>
+<div class="note" style="margin-top:7px">PC／Apple 版本維持原分析架構；Android 2V 僅更換 Log／Map 格式解析，分析核心與修正規則完全相同。</div>
 </section>
 
 <section class="card">
 <h2><span class="section-tag">INPUT</span>② 上傳 Log</h2>
-<div class="drop">選擇或拖放 <b>.loga</b> / <b>.loga.zip</b><br>
+<div class="drop">選擇或拖放 <b>.loga</b> / <b>.loga.zip</b> / <b>.zip</b><br>
 <input id="logs" type="file" accept=".loga,.zip,.log,.txt,.csv" multiple style="margin-top:10px"></div>
 <p class="note">
 支援單一或多份 Log；<b>.loga 是 ZIP 容器，會在瀏覽器內解壓後分析</b>。<br>
@@ -124,7 +128,7 @@ Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / 
 
 </script>
 <script>
-const REQUIRED=["Time","RPM","TPS_Percent","AFR_Target","AFR_WBO2","Fuel_CL","T_Air","SA","T_Eng","Cyl1_Eng_AP","Cyl1_Comn_FuelPW","Cyl1_Injector_Period_Rate","Dec_FC_En","Inj_Cut"];
+const REQUIRED=["Time","RPM","TPS_Percent","AFR_Target","AFR_WBO2","Fuel_CL","T_Air","SA","T_Eng","Cyl1_Eng_AP","Cyl1_Comn_FuelPW","Cyl1_Injector_Period_Rate"];
 
 // 完全依使用者提供的 SuperXX 實際 Fuel Map 格點。
 const RPM_GRID=[
@@ -135,6 +139,14 @@ const RPM_GRID=[
 const TPS_GRID=[
   0,2,4,6,8,10,12,14,16,18,20,21,23,25,27,29,
   37,45,53,61,68,76,84,92,100
+];
+
+const ANDROID_2V_RPM_GRID=[
+  800,1600,2400,3200,4000,4800,5600,6400,7200,8000,
+  8800,9600,10400,11200,12000,12800
+];
+const ANDROID_2V_TPS_GRID=[
+  0,2,4,6,8,10,15,20,25,30,40,50,60,70,80,90,100
 ];
 
 const cfg={temp:60,apGreen:60,apRed:80,minRef:12};
@@ -181,6 +193,9 @@ function parseText(text,name){
    if(v.length<header.length)continue;
    const r={_file:name};
    for(const k of REQUIRED)r[k]=n(v[ix[k]]);
+   const decKey=ix["Dec_FC_En"]!=null?"Dec_FC_En":(ix["Fuel1.Dec_FC_En"]!=null?"Fuel1.Dec_FC_En":null);
+   r.Dec_FC_En=decKey?n(v[ix[decKey]]):null;
+   r.Inj_Cut=ix["Inj_Cut"]!=null?n(v[ix["Inj_Cut"]]):null;
    out.push(r);
  }
  return out;
@@ -231,18 +246,38 @@ async function loadFile(file){
  return [{name:file.name,text:await file.text()}];
 }
 
+function actualGridCell(v, grid){
+ const x=Number(v);
+ if(!Number.isFinite(x))return null;
+ let best=grid[0],d=Math.abs(x-grid[0]);
+ for(const g of grid){
+  const nd=Math.abs(x-g);
+  if(nd<d){best=g;d=nd;}
+ }
+ return best;
+}
+
 function cellGroups(validRows){
+ const android=$("profile")?.value==="android_2v";
+ const rpmGrid=android?ANDROID_2V_RPM_GRID:RPM_GRID;
+ const tpsGrid=android?ANDROID_2V_TPS_GRID:TPS_GRID;
  const map=new Map();
+
  for(const r of validRows){
-  const rp=nearest(RPM_GRID,r.RPM),tp=nearest(TPS_GRID,r.TPS_Percent);
-  const key=rp.value+"|"+tp.value;
-  if(!map.has(key))map.set(key,{rpm:rp.value,tps:tp.value,rs:[]});
+  const rp=actualGridCell(r.RPM,rpmGrid);
+  const tp=actualGridCell(r.TPS_Percent,tpsGrid);
+  if(rp==null||tp==null)continue;
+
+  // Android 2V: only a real Android Map breakpoint may become a cell.
+  const key=rp+"|"+tp;
+  if(!map.has(key))map.set(key,{rpm:rp,tps:tp,rs:[]});
   map.get(key).rs.push(r);
  }
  return [...map.values()].sort((a,b)=>a.rpm-b.rpm||a.tps-b.tps);
 }
 
 function build(){
+ const androidMode=$("profile")?.value==="android_2v";
  const hot=rows.filter(warmValid);
  const high=hot.filter(r=>r.Cyl1_Eng_AP>cfg.apGreen);
  const cells=cellGroups(hot);
@@ -252,7 +287,7 @@ function build(){
   ["原始樣本",rows.length.toLocaleString()],
   ["T_Eng ≥60°C",hot.length.toLocaleString()],
   ["AP >60",high.length.toLocaleString()],
-  ["已對應 Map 格",cells.length]
+  ["已對應 Map 格",cells.length],["Log 格式",androidMode?"Android aRacer":"PC／Apple"]
  ];
  $("stats").innerHTML=stats.map(x=>`<div class="stat">${x[0]}<b>${x[1]}</b></div>`).join("");
 

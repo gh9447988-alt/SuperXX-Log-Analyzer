@@ -76,9 +76,9 @@ button:active{transform:translateY(1px)}
 <div class="wrap">
 <section class="hero">
   <div class="hero-content">
-    <div class="hero-kicker">CT125 · SUPERXX LOG ANALYZER</div>
-    <h1>SuperXX Log 分析建議</h1>
-    <div class="sub">CT125 2V版本｜以實際 SuperXX Fuel Map 格點為核心，讓 Log 修正結果直接對應可調格。</div>
+    <div class="hero-kicker">CT125 · aRacer X / XX LOG ANALYZER</div>
+    <h1>X / XX Log 分析建議</h1>
+    <div class="sub">CT125 2V版本｜依目前選定的 X / XX 系列與 Apple / Android App 實際 Fuel Map 格點採樣，不跨系列套用。</div>
     <div class="hero-meta">
       <span>Fuel_CL 核心</span><span>T_Eng >85°C</span><span>AP &gt;60 / ≥80 提醒</span><span>實際 Map 格</span>
     </div>
@@ -142,7 +142,7 @@ button:active{transform:translateY(1px)}
 </div>
 <div class="note" style="margin-top:10px">
 <strong>Fuel_CL 是核心修正標準。</strong> Fuel_CL 代表 ECU + AF2 閉迴路實際產生的燃油修正量；正值＝ECU 增油、負值＝ECU 減油。AFR_Target / AFR_WBO2 只作交叉驗證，不另外用 AFR 差值「猜」一個修正量。<br>
-<strong>RPM / TPS 不提供容許範圍。</strong> Log 只會對應到 SuperXX 實際存在的 RPM × TPS 格點，不產生虛擬格。<br>
+<strong>RPM / TPS 不提供容許範圍。</strong> Log 只會對應到目前所選 X / XX 系列的實際 App RPM × TPS 格點，不產生虛擬格。<br>
 <strong>調整係數 1 = 一個格 = ±0.8%。</strong> 例如 Fuel_CL +3.2% → 油圖該格 +3.2% → +4 格。
 </div>
 </section>
@@ -152,7 +152,7 @@ button:active{transform:translateY(1px)}
 <section class="card"><h2>🔶 中高負載使用提醒</h2><div id="load"></div></section>
 <section class="card"><h2>⛽ Fuel Map 修正建議</h2>
 <div class="alert yellow"><b>核心：Fuel_CL</b><br>
-Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / AFR_WBO2 只用來驗證。最終顯示的 RPM × TPS 必須是 SuperXX 實際存在的格。</div>
+Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / AFR_WBO2 只用來驗證。最終顯示的 RPM × TPS 必須是目前所選系列 App 實際存在的格。</div>
 <div id="fuel"></div><div class="tablewrap"><table id="fuelTable"></table></div>
 </section>
 <section class="card detail-card">
@@ -167,7 +167,7 @@ Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / 
 </details>
 </section>
 </div>
-<footer>SuperXX Log 分析建議｜CT125 2V版本｜本工具只提供分析與調校建議，不會寫入 ECU。AP >60 只作中高負載使用提醒，不代表已判定爆震。<div class="gaggle-credit">此分析程式為 Gaggle 發布</div></footer>
+<footer>aRacer X / XX Log 分析建議｜CT125 2V版本｜本工具只提供分析與調校建議，不會寫入 ECU。AP >60 只作中高負載使用提醒，不代表已判定爆震。<div class="gaggle-credit">此分析程式為 Gaggle 發布</div></footer>
 </div>
 
 <section class="card" id="uploadSection">
@@ -193,14 +193,15 @@ Fuel_CL 的穩定統計值直接作為該 Map 格的修正依據；AFR_Target / 
 <script>
 const REQUIRED=["Time","RPM","TPS_Percent","AFR_Target","AFR_WBO2","Fuel_CL","T_Air","SA","T_Eng","Cyl1_Eng_AP","Cyl1_Comn_FuelPW","Cyl1_Injector_Period_Rate"];
 
-// 完全依使用者提供的 SuperXX 實際 Fuel Map 格點。
+// 依各系列 App 的實際 Fuel Map 格點；X / XX 嚴格分離，不跨系列套用。
 let selectedLogPlatform="";
 // 真實 ECU Map 格式：X / XX 完全分離。
 // X：SuperX / MiniX；XX：SuperXX / MiniXX。
 // Log 系統（Apple / Android）只決定各自 Parser；ECU 系列決定各自真實 Map。
 // 任何 Log × ECU 組合若沒有對應 Map，禁止 fallback，直接停止分析。
-const X_RPM_GRID=[800,1600,2400,3200,4000,4800,5600,6400,7200,8000,8800,9600,10400,11200,12000,12800];
-const X_TPS_GRID=[15,20,25,30,40,50,60,70,80,90,100];
+const X_RPM_GRID=[800,1600,2400,3200,4000,4800,5600,6400,7200,8000,8800,9600,10400,11200,12000,12800,13600,14400,15200,16000];
+// aRacer X Tune 實際 20×17 Fuel Adj：TPS 17 格。
+const X_TPS_GRID=[0,2,4,6,8,10,15,20,25,30,40,50,60,70,80,90,100];
 
 const XX_RPM_GRID=[400,800,1200,1600,2000,2400,2800,3200,3600,4000,4400,4800,5200,5600,6000,6400,6800,7200,7600,8000,8400,8800,9200,9600,9800,10000,10200,10400,10600,10800,11000,11200,11400];
 const XX_TPS_GRID=[0,2,4,6,8,10,12,14,16,18,20,21,23,25,27,29,37,45,53,61,68,76,84,92,100];
@@ -225,7 +226,8 @@ function updateLogSystemConfirm(){
  if(p)p.textContent=ptxt;
  if(e)e.textContent=engine==="ct125_2v"?"CT125 2V":engine==="ct125_4v"?"CT125 4V（待擴充）":"尚未選擇";
  if(pa)pa.textContent=(platform&&series&&engine==="ct125_2v")?ptxt+" × "+stxt+" 專屬 Parser":"尚未啟用";
- if(m)m.textContent=(platform&&series&&engine==="ct125_2v")?ptxt+" × "+stxt+" 的實際 Map":"尚未啟用";
+ if(m)m.textContent=(platform&&series&&engine==="ct125_2v")?
+   ptxt+" × "+stxt+" 的實際 Map（"+(series==="x"?"20×17":"33×25")+"）":"尚未啟用";
  if(platform&&series&&engine==="ct125_2v"){
    if(st)st.textContent="🟢 已選定："+ptxt+" → "+stxt+" → CT125 2V；僅使用該組專屬格式與 Map。";
    box?.classList.add("ok");box?.classList.remove("warn");
@@ -354,7 +356,7 @@ async function loadFile(file){
 function actualGridCell(v, grid){
  const x=Number(v);
  if(!Number.isFinite(x)||!Array.isArray(grid)||!grid.length)return null;
- // Each returned value is an EXISTING Android Map breakpoint.
+ // Each returned value is an EXISTING selected App Map breakpoint.
  // The cell interval is bounded by the midpoints between adjacent real
  // breakpoints; there are no synthetic/virtual Map cells.
  for(let i=0;i<grid.length;i++){
@@ -381,6 +383,10 @@ function stableMapGroups(validRows){
  const key=platform+"_"+series;
  const map=MAPS[key];
  if(!map)throw new Error("找不到「"+key+"」對應的真實 App Map，為避免套錯，已停止分析。");
+ const expected=(series==="x")?{rpm:20,tps:17}:{rpm:33,tps:25};
+ if(map.rpm.length!==expected.rpm||map.tps.length!==expected.tps){
+   throw new Error("「"+key+"」Map 格數異常：目前為 "+map.rpm.length+"×"+map.tps.length+"，預期 "+expected.rpm+"×"+expected.tps+"；已停止分析。");
+ }
 
  const groups=new Map();
  let currentKey=null,currentRows=[],stableStart=null;
@@ -394,7 +400,7 @@ function stableMapGroups(validRows){
 
  for(const r of validRows){
    // 該 Log 版本已先由 parser 轉成統一 RPM/TPS 數值；
-   // 這裡只允許落入目前所選 ECU 系列的真實 Map 軸。
+   // 這裡只允許落入目前所選 ECU 系列 × Log 平台的真實 App Map 軸。
    const rp=gridCellByMidpoint(r.RPM,map.rpm);
    const tp=gridCellByMidpoint(r.TPS_Percent,map.tps);
    if(rp==null||tp==null){flush();continue;}

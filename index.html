@@ -91,13 +91,14 @@ button:active{transform:translateY(1px)}
 
 </div>
 <div class="note" style="margin-top:7px">先選 Log 系統，再選 ECU 系列與引擎；程式只使用該組對應的格式與真實 Map，不會跨系列套用。</div>
-<div class="sample-rule-box">
-<strong>📌 採樣條件</strong><br>
-🌡️ <strong>引擎溫度 T_Eng &gt; 85°C</strong> 才採樣<br>
+<div class="sample-rule-box" id="samplingRulesVisible">
+<strong>📌 採樣標準</strong><br>
+🌡️ <strong>T_Eng &gt; 85°C</strong> 才採樣<br>
 📈 <strong>Fuel_CL 超過 ±2%</strong> 才採樣；<strong>-2%～+2% 不採樣</strong>（CL 準確度已足夠，無需再修正）<br>
-⏱️ <strong>進入 Map 格後穩定 1 秒</strong>才開始收樣<br>
-🔢 <strong>穩定片段至少 10 筆</strong>才納入分析
+⏱️ 進入對應的<strong>真實 App Map 格</strong>後，穩定 <strong>1 秒</strong> 才開始收樣<br>
+🔢 單一穩定片段至少 <strong>10 筆</strong>才納入分析
 </div>
+
 </section>
 
 <section class="card">
